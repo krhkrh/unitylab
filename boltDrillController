@@ -1,0 +1,154 @@
+using UnityEngine;
+using System.Collections;
+
+public class boltDrillController : MonoBehaviour {
+
+    public GameObject[] bolts = new GameObject[6];
+    private LineRenderer[] lineRenderers = new LineRenderer[6];
+    private Vector3[] buffer;
+    public float MAX_RADIUS = 3;
+    private int LAYER = 4;
+    const float width = 0.1f;
+    private int START_NUMBER;
+    private int SPAN;
+    private int SET_LENGTH;
+
+	void Start () {
+        START_NUMBER = (int)Mathf.Pow(2.0f, LAYER - 1);
+        SPAN = (int)Mathf.Pow(2, LAYER - 2);
+        SET_LENGTH = (int)(Mathf.Pow(2, LAYER) + 1);
+        buffer = new Vector3[SET_LENGTH];
+       
+        for (int i = 0; i < 6; i++)
+        {
+            lineRenderers[i] = bolts[i].GetComponent<LineRenderer>();
+            lineRenderers[i].SetVertexCount(SET_LENGTH);
+          
+        }
+        StartCoroutine(mainRoutine());
+
+    }
+    public bool terminate = false;
+    public void setTerminate(bool t)
+    {
+        this.terminate = t;
+    }
+
+    int i = 7;
+
+    public Vector3 start;
+    public Vector3 end;
+
+
+    IEnumerator mainRoutine()
+    {
+        
+        float widthSpan = width / i;
+        float widthSpanEnd = widthSpan * 10;
+
+        standardAxis = end - start;
+        standardFactor = getVerticalVector(standardAxis);
+
+        if (standardAxis.magnitude > 20)
+            LAYER = 4;
+        else LAYER = 3;
+
+        Vector3 temp;
+        while (!terminate)
+        {
+            i = 7;
+           
+            temp = start + standardFactor * MAX_RADIUS;
+            setPoint(temp, end, LAYER, START_NUMBER, SPAN);
+
+            buffer[0] = temp;
+            buffer[SET_LENGTH - 1] = end;
+ 
+            lineRenderers[5].SetPositions(buffer);
+            for (int j = 0; j < lineRenderers.Length-1; j++)
+            {
+                lineRenderers[j].SetPositions(allRoll(buffer,360/lineRenderers.Length,end));
+            }
+            for (int j = 0; j < lineRenderers.Length; j++)
+            {
+                lineRenderers[j].SetWidth(i * widthSpan , i * widthSpanEnd);
+            }
+
+            blastEvent();
+            yield return new WaitForSeconds(0.1f);
+            while (i >= 0)
+            {
+                for (int j = 0; j < lineRenderers.Length; j++)
+                {
+                    lineRenderers[j].SetWidth( i * widthSpan , i * widthSpanEnd);
+                }
+                i -= 1;
+                yield return new WaitForSeconds(0.1f);
+            }
+            yield return new WaitForSeconds(1.0f);
+        }
+
+    }
+
+    private Vector3 getVerticalVector(Vector3 v)
+    {
+        if (v.y == 0)
+        {
+            return new Vector3(0, 1, 0);
+        }
+        else if (v.z == 0)
+        {
+            return new Vector3(0, 0, 1);
+        }
+        else
+            return new Vector3(1, v.x / (-2 * v.y), v.x /(-2*v.z)).normalized;
+    }
+
+    private Vector3 standardFactor;
+    private Vector3 standardAxis;
+
+    private Vector3 getRandomFactorByNumber(Vector3 v,Vector3 axis, int number)
+    {
+        return Quaternion.AngleAxis(60 * number,axis) * v.normalized *Random.Range(1,3);
+    }
+
+    private void setPoint(Vector3 start, Vector3 end, int layer, int number, int span)
+    {
+        Vector3 mid = (start + end) / 2;
+        Vector3 randomFactor = new Vector3(Random.Range(-1, 1), Random.Range(-1, 1), Random.Range(-1, 1));
+        if (layer == 1)
+        {
+            buffer[number] = mid + randomFactor;
+        }
+        else
+        {
+            setPoint(start, mid, layer - 1, number - span, span / 2);
+            buffer[number] = mid + randomFactor;
+            setPoint(mid, end, layer - 1, number + span, span / 2);
+        }
+    }
+
+    private Vector3[] allRoll(Vector3[] vs, float degree, Vector3 pivot)
+    {
+        for (int i = 0; i < vs.Length; i++)
+        {
+            vs[i] = rollOver(standardAxis, degree, vs[i], pivot);
+        }
+        return vs;
+    }
+
+
+    private Vector3 rollOver(Vector3 axis, float degree, Vector3 source, Vector3 pivot)
+    {
+        if (source == pivot)
+            return source;
+        else
+            return (Quaternion.AngleAxis(degree, axis) * (source - pivot)) + pivot;
+    }
+
+    private void blastEvent()
+    {
+    }
+   
+    void Update () {}
+}
