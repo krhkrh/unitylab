@@ -1,0 +1,95 @@
+using UnityEngine;
+using System.Collections;
+
+public class boltControl : MonoBehaviour {
+ 
+    private LineRenderer lineRenderer;
+
+    void Start () {
+
+        lineRenderer = (LineRenderer)gameObject.GetComponent("LineRenderer");
+        lineRenderer.SetWidth(width, 0);
+        StartCoroutine(bolt());
+    }
+    bool terminate = false;
+    float width = 0.5f;
+
+    public Vector3 start;
+    public float range;
+
+    IEnumerator bolt()
+    {
+        Vector3 end;
+
+        end = Quaternion.Euler(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360))*start.normalized*range;
+        end = end * Random.Range(0.7f, 1.0f);
+
+        int START_NUMBER = (int)Mathf.Pow(2.0f, LAYER - 1);
+        int SPAN = (int)Mathf.Pow (2,LAYER - 2);
+        int SET_LENGTH = (int)(Mathf.Pow(2 , LAYER)+1);
+        lineRenderer.SetVertexCount(SET_LENGTH);
+
+        int i = 10;
+        float widthSpan = width / i;
+
+        while (terminate!=true)
+        {
+            i = 10;
+            end = Quaternion.Euler(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360)) * end;
+
+            lineRenderer.SetPosition(0, start);
+            lineRenderer.SetPosition(SET_LENGTH-1, end);
+           
+            setPoint(start, end,LAYER, START_NUMBER,SPAN);
+            lineRenderer.material.mainTextureOffset = new Vector2(0.5f, 0);
+            lineRenderer.enabled = true;
+            pulse = true;
+            
+            while (pulse == true)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
+            
+        }
+    }
+
+    private bool pulse = false;
+    public int LAYER = 4;
+    
+    private void setPoint(Vector3 start,Vector3 end,int layer,int number,int span)
+    {
+        Vector3 mid = (start + end)/ 2;
+        Vector3 randomFactor = new Vector3(Random.Range(-1.0f, 1f), Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f));
+        if (layer == 1)
+        {
+            lineRenderer.SetPosition(number, mid + randomFactor);
+        }
+        else {
+            setPoint(start, mid, layer - 1, number-span,span/2);
+            lineRenderer.SetPosition(number, mid + randomFactor);
+            setPoint(mid, end, layer - 1, number+span,span/2);
+        }
+    }
+
+    private void blastEvent()
+    {
+    }
+
+    float xSpeed = 1.5f;
+	// Update is called once per frame
+	void Update () {
+
+        if (pulse == true)
+        {
+            if (lineRenderer.material.mainTextureOffset.x < -0.4f)
+            {
+                blastEvent();
+                pulse = false;
+                lineRenderer.enabled = false;
+            }
+            else {
+                lineRenderer.material.mainTextureOffset = new Vector2(lineRenderer.material.mainTextureOffset.x - Time.deltaTime * xSpeed, 0);
+            }
+        }
+    }
+}
